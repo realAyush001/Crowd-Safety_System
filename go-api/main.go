@@ -34,6 +34,7 @@ func homeHandler(w http.ResponseWriter, r *http.Request) {
 
 // Returns all 4 zones' current data - used to load the dashboard initially
 func zonesHandler(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Access-Control-Allow-Origin", "*")
 	zoneIDs := []string{"A", "B", "C", "D"}
 	var zones []map[string]string
 	for _, id := range zoneIDs {
@@ -49,6 +50,7 @@ func zonesHandler(w http.ResponseWriter, r *http.Request) {
 
 // Returns a zone's history over time - for the post-event analytics feature
 func analyticsHandler(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Access-Control-Allow-Origin", "*")
 	zoneID := r.URL.Query().Get("zone_id")
 	if zoneID == "" {
 		http.Error(w, "zone_id is required", http.StatusBadRequest)
