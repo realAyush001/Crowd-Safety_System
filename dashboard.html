@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Crowd Safety Dashboard</title>
+    <style>
+        body { font-family: Arial; background: #f1f1f1; padding: 20px; }
+        h1 { text-align: center; }
+        .grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; max-width: 900px; margin: auto; }
+        .card { background: white; border-radius: 10px; padding: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+        .Safe { border-left: 8px solid #2a9d8f; }
+        .Caution { border-left: 8px solid #e9c46a; }
+        .Danger { border-left: 8px solid #e63946; }
+        .risk-label { font-size: 22px; font-weight: bold; }
+        .warning { color: #e63946; font-size: 14px; margin-top: 8px; }
+        .safe-zone { color: #2a9d8f; font-size: 14px; margin-top: 4px; }
+    </style>
+</head>
+<body>
+    <h1>🚨 Live Crowd Safety Dashboard</h1>
+    <div class="grid" id="grid"></div>
+
+    <script>
+        const zones = {};
+
+        // Load initial zone data
+        fetch("http://localhost:8080/zones")
+            .then(res => res.json())
+            .then(data => {
+                data.forEach(zone => {
+                    zones[zone.zone_id] = zone;
+                });
+                renderAll();
+            });
+
+        function renderAll() {
+            const grid = document.getElementById("grid");
+            grid.innerHTML = "";
+            Object.values(zones).forEach(zone => {
+                const card = document.createElement("div");
+                card.className = "card " + (zone.risk_level || "Safe");
+                card.innerHTML = `
+                    <h2>${zone.name || zone.zone_id}</h2>
+                    <div class="risk-label">${zone.risk_level || "Safe"}</div>
+                    <div>Count: ${zone.current_count} / ${zone.capacity}</div>
+                    ${zone.eta_danger && zone.eta_danger > 0 ? `<div>⏱ Danger in ~${zone.eta_danger} min</div>` : ""}
+                    ${zone.cascade_warning ? `<div class="warning">⚠️ ${zone.cascade_warning}</div>` : ""}
+                    ${zone.nearest_safe_zone ? `<div class="safe-zone">✅ Nearest safe zone: ${zone.nearest_safe_zone}</div>` : ""}
+                `;
+                grid.appendChild(card);
+            });
+        }
+
+        // Connect live WebSocket feed
+        const ws = new WebSocket("ws://localhost:8080/dashboard/live");
+        ws.onmessage = function(event) {
+            const update = JSON.parse(event.data);
+            zones[update.zone_id] = {
+                ...zones[update.zone_id],
+                ...update
+            };
+            renderAll();
+        };
+    </script>
+</body>
+</html>
